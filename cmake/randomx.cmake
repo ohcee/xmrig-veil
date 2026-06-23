@@ -54,6 +54,7 @@ if (WITH_RANDOMX)
         src/crypto/rx/RxDataset.cpp
         src/crypto/rx/RxQueue.cpp
         src/crypto/rx/RxVm.cpp
+        src/crypto/rx/RxVeil.cpp
     )
 
     if (WITH_ASM AND CMAKE_C_COMPILER_ID MATCHES MSVC)
