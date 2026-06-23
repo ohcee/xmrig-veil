@@ -39,10 +39,7 @@
 #include "crypto/rx/RxVm.h"
 #include "crypto/ghostrider/ghostrider.h"
 #include "net/JobResults.h"
-
-extern "C" {
-    #include "crypto/ghostrider/sph_sha2.h"
-}
+#include "crypto/rx/RxVeil.h"
 
 #ifdef XMRIG_ALGO_RANDOMX
 #   include "crypto/randomx/randomx.h"
@@ -261,7 +258,7 @@ void xmrig::CpuWorker<N>::start()
 #       ifdef XMRIG_ALGO_RANDOMX
         bool first = true;
         alignas(16) uint64_t tempHash[8] = {};
-        sph_sha256_context sha256_ctx_cache, sha256_ctx;
+        sph_sha256_context sha256_ctx_cache;
         alignas(16) uint64_t dsha256[4] = {};
 #       endif
 
@@ -298,28 +295,15 @@ void xmrig::CpuWorker<N>::start()
             uint8_t* miner_signature_ptr = m_job.blob() + m_job.nonceOffset() + m_job.nonceSize();
             if (job.algorithm().id() == Algorithm::RX_VEIL) {
                 if (first) {
-                    // Init sha256 context cache until nonceOffset
-                    sph_sha256_init(&sha256_ctx_cache);
-                    sph_sha256(&sha256_ctx_cache, job.blob(), m_job.nonceOffset());
-                    sha256d(dsha256, m_job.blob(), job.size());
-                }
-
-                if (first) {
+                    RxVeil::initJob(job.blob(), job.size(), m_job.nonceOffset(),
+                                    sha256_ctx_cache, dsha256, m_vm, tempHash);
                     first = false;
-                    randomx_calculate_hash_first(m_vm, tempHash, dsha256, 32);
                 }
-
                 if (!nextRound()) {
                     break;
                 }
-
-                // Compute header double-sha256
-                memcpy(&sha256_ctx, &sha256_ctx_cache, sizeof(sha256_ctx));
-                sph_sha256(&sha256_ctx, m_job.blob() + m_job.nonceOffset(), job.size() - m_job.nonceOffset());
-                sph_sha256_close(&sha256_ctx, dsha256);
-                sph_sha256_full(dsha256, dsha256, 32);
-
-                randomx_calculate_hash_next(m_vm, tempHash, dsha256, 32, m_hash);
+                RxVeil::hashStep(m_job.blob(), job.size(), m_job.nonceOffset(),
+                                 sha256_ctx_cache, dsha256, m_vm, tempHash, m_hash);
             }
             else if (job.algorithm().family() == Algorithm::RANDOM_X) {
                 if (first) {
@@ -368,7 +352,7 @@ void xmrig::CpuWorker<N>::start()
 
             if (valid) {
                 if (job.algorithm().id() == Algorithm::RX_VEIL) {
-                    const uint64_t value = bswap_64(*reinterpret_cast<uint64_t*>(m_hash));
+                    const uint64_t value = RxVeil::difficultyValue(m_hash);
 
             #       ifdef XMRIG_FEATURE_BENCHMARK
                     if (m_benchSize) {
