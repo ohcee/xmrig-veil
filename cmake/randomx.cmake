@@ -26,6 +26,7 @@ if (WITH_RANDOMX)
         src/crypto/rx/RxQueue.h
         src/crypto/rx/RxSeed.h
         src/crypto/rx/RxVm.h
+        src/crypto/rx/RxVeil.h
     )
 
     list(APPEND SOURCES_CRYPTO
