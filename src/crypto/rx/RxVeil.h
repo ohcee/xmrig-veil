@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <cstddef>
 
-struct randomx_vm;
+class randomx_vm;
 
 extern "C" {
     #include "crypto/ghostrider/sph_sha2.h"
